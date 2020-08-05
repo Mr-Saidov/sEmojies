@@ -1,0 +1,3 @@
+include ':semojis'
+include ':app'
+rootProject.name = "sEmojies"
