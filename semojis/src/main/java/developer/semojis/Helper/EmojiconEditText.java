@@ -1,19 +1,50 @@
 package developer.semojis.Helper;
 
-import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.res.TypedArray;
+import android.net.Uri;
+import android.os.Bundle;
 import android.text.style.DynamicDrawableSpan;
 import android.util.AttributeSet;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputConnection;
 
 import androidx.appcompat.widget.AppCompatEditText;
-
-import developer.semojis.R;
+import androidx.core.os.BuildCompat;
+import androidx.core.view.inputmethod.EditorInfoCompat;
+import androidx.core.view.inputmethod.InputConnectionCompat;
+import androidx.core.view.inputmethod.InputContentInfoCompat;
 
 public class EmojiconEditText extends AppCompatEditText {
     private static String TAG = "#EmojiconEditText ";
+    public MediaSelectionFromKeyboard mediaSelectionFromKeyboard;
+    final InputConnectionCompat.OnCommitContentListener callback =
+            new InputConnectionCompat.OnCommitContentListener() {
+                @Override
+                public boolean onCommitContent(InputContentInfoCompat inputContentInfo,
+                                               int flags, Bundle opts) {
+                    // read and display inputContentInfo asynchronously
+                    if (BuildCompat.isAtLeastNMR1() && (flags &
+                            InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION) != 0) {
+                        try {
+                            inputContentInfo.requestPermission();
+                        } catch (Exception e) {
+                            return false; // return false if failed
+                        }
+                        if (mediaSelectionFromKeyboard != null) {
+                            mediaSelectionFromKeyboard.onMediaSelect(inputContentInfo.getContentUri());
+                        }
+                    }
+
+                    // read and display inputContentInfo asynchronously.
+                    // call inputContentInfo.releasePermission() as needed.
+
+                    return true;  // return true if succeeded
+                }
+
+            };
+
     private int mEmojiconSize;
     private int mEmojiconAlignment;
     private int mEmojiconTextSize;
@@ -36,11 +67,9 @@ public class EmojiconEditText extends AppCompatEditText {
     }
 
     private void init(AttributeSet attrs) {
-        @SuppressLint("CustomViewStyleable") TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.Emojicon);
-        mEmojiconSize = (int) a.getDimension(R.styleable.Emojicon_emojiconSize, getTextSize());
-        mEmojiconAlignment = a.getInt(R.styleable.Emojicon_emojiconAlignment, DynamicDrawableSpan.ALIGN_BASELINE);
-        mUseSystemDefault = a.getBoolean(R.styleable.Emojicon_emojiconUseSystemDefault, false);
-        a.recycle();
+        mEmojiconSize = dip(getContext(), 30);
+        mEmojiconAlignment = DynamicDrawableSpan.ALIGN_BASELINE;
+        mUseSystemDefault = false;
         mEmojiconTextSize = (int) getTextSize();
         setText(getText());
     }
@@ -92,5 +121,25 @@ public class EmojiconEditText extends AppCompatEditText {
         ClipboardManager clipboardManager = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
         String encryptedText = Security.getInstance().getEncryptedText(getContext(), text);
         clipboardManager.setPrimaryClip(ClipData.newPlainText("label", encryptedText));
+    }
+
+    @Override
+    public InputConnection onCreateInputConnection(final EditorInfo editorInfo) {
+        final InputConnection ic = super.onCreateInputConnection(editorInfo);
+        EditorInfoCompat.setContentMimeTypes(editorInfo,
+                new String[]{"image/png", "image/gif"});
+        return InputConnectionCompat.createWrapper(ic, editorInfo, callback);
+    }
+
+    public int dip(Context context, int value) {
+        return (int) (value * context.getResources().getDisplayMetrics().density);
+    }
+
+    public float dp(Context context, int value) {
+        return (value * context.getResources().getDisplayMetrics().density);
+    }
+
+    public interface MediaSelectionFromKeyboard {
+        void onMediaSelect(Uri uri);
     }
 }
