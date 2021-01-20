@@ -13,14 +13,10 @@ import developer.semojis.R;
 
 final class EmojiconHandler {
 
-    private EmojiconHandler() {
-        // empty constructor is required
-    }
-
     private static final SparseIntArray sEmojisMap = new SparseIntArray(1029);
     private static final SparseIntArray sSoftbanksMap = new SparseIntArray(471);
-    private static Map<String, Integer> sEmojisModifiedMap = new HashMap<>();
     private static final Set<String> sInexistentEmojis = new HashSet<>();
+    private static Map<String, Integer> sEmojisModifiedMap = new HashMap<>();
 
     static {
         // People
@@ -1039,6 +1035,10 @@ final class EmojiconHandler {
 
     }
 
+    private EmojiconHandler() {
+        // empty constructor is required
+    }
+
     private static boolean isSoftBankEmoji(char c) {
         return ((c >> 12) == 0xe);
     }
@@ -1164,6 +1164,109 @@ final class EmojiconHandler {
                 text.setSpan(new EmojiconSpan(context, icon, emojiSize, emojiAlignment, textSize), i, i + skip, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
+    }
+
+    static int addEmojis(Context context, Spannable text, int index, int length, boolean useSystemDefault) {
+
+        if (useSystemDefault) {
+            return 0;
+        }
+
+        int textLength = text.length();
+        int textLengthToProcessMax = textLength - index;
+        int textLengthToProcess = length < 0 || length >= textLengthToProcessMax ? textLength : (length + index);
+
+        // remove spans throughout all text
+        EmojiconSpan[] oldSpans = text.getSpans(0, textLength, EmojiconSpan.class);
+        for (EmojiconSpan oldSpan : oldSpans) text.removeSpan(oldSpan);
+
+        int skip;
+        for (int i = index; i < textLengthToProcess; i += skip) {
+            skip = 0;
+            int icon = 0;
+            char c = text.charAt(i);
+            if (isSoftBankEmoji(c)) {
+                icon = getSoftbankEmojiResource(c);
+                skip = icon == 0 ? 0 : 1;
+            }
+
+            if (icon == 0) {
+                int unicode = Character.codePointAt(text, i);
+                skip = Character.charCount(unicode);
+
+                if (unicode > 0xff) {
+                    icon = getEmojiResource(context, unicode);
+                }
+
+                if (i + skip < textLengthToProcess) {
+                    int followUnicode = Character.codePointAt(text, i + skip);
+                    //Non-spacing mark (Combining mark)
+                    if (followUnicode == 0xfe0f) {
+                        int followSkip = Character.charCount(followUnicode);
+                        if (i + skip + followSkip < textLengthToProcess) {
+
+                            int nextFollowUnicode = Character.codePointAt(text, i + skip + followSkip);
+                            if (nextFollowUnicode == 0x20e3) {
+                                int nextFollowSkip = Character.charCount(nextFollowUnicode);
+                                int tempIcon = getKeyCapEmoji(unicode);
+
+                                if (tempIcon == 0) {
+                                    followSkip = 0;
+                                    nextFollowSkip = 0;
+                                } else {
+                                    icon = tempIcon;
+                                }
+                                skip += (followSkip + nextFollowSkip);
+                            }
+                        }
+                    } else if (followUnicode == 0x20e3) {
+                        //some older versions of iOS don't use a combining character, instead it just goes straight to the second part
+                        int followSkip = Character.charCount(followUnicode);
+
+                        int tempIcon = getKeyCapEmoji(unicode);
+                        if (tempIcon == 0) {
+                            followSkip = 0;
+                        } else {
+                            icon = tempIcon;
+                        }
+                        skip += followSkip;
+
+                    } else {
+                        //handle other emoji modifiers
+                        int followSkip = Character.charCount(followUnicode);
+
+                        String hexUnicode = Integer.toHexString(unicode);
+                        String hexFollowUnicode = Integer.toHexString(followUnicode);
+
+                        String resourceName = "emoji_" + hexUnicode + "_" + hexFollowUnicode;
+
+                        int resourceId = 0;
+                        if (sEmojisModifiedMap.containsKey(resourceName)) {
+                            resourceId = sEmojisModifiedMap.get(resourceName);
+                        } else if (!sInexistentEmojis.contains(resourceName)) {
+                            resourceId = context.getResources().getIdentifier(resourceName, "drawable", context.getApplicationContext().getPackageName());
+                            if (resourceId != 0) {
+                                sEmojisModifiedMap.put(resourceName, resourceId);
+                            } else {
+                                sInexistentEmojis.add(resourceName);
+                            }
+                        }
+
+                        if (resourceId == 0) {
+                            followSkip = 0;
+                        } else {
+                            icon = resourceId;
+                        }
+                        skip += followSkip;
+                    }
+                }
+            }
+
+            if (icon > 0) {
+                return icon;
+            }
+        }
+        return 0;
     }
 
     private static int getKeyCapEmoji(int unicode) {

@@ -13,4 +13,13 @@
         android:textColor="#000000"
         android:textSize="20sp"
         emojicon:emojiconSize="30dip" />
+
+    <ImageView
+        android:id="@+id/emojicon_icon_iv"
+        android:layout_width="36dip"
+        android:layout_height="36dip"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:padding="3dp"
+        android:textColor="#000000" />
 </FrameLayout>
