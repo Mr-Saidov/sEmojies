@@ -42,17 +42,17 @@ import developer.semojis.emoji.Symbols;
 
 public class EmojiconsPopup extends PopupWindow implements ViewPager.OnPageChangeListener, EmojiconRecents {
 
+    private final View rootView;
+    private final Context mContext;
+    EmojiconGridView.OnEmojiconClickedListener onEmojiconClickedListener;
     private int mEmojiTabLastSelectedIndex = -1;
     private View[] mEmojiTabs;
     private EmojiconRecentsManager mRecentsManager;
     private int keyBoardHeight = 0;
     private Boolean pendingOpen = false;
     private Boolean isOpened = false;
-    EmojiconGridView.OnEmojiconClickedListener onEmojiconClickedListener;
     private OnEmojiconBackspaceClickedListener onEmojiconBackspaceClickedListener;
     private OnSoftKeyboardOpenCloseListener onSoftKeyboardOpenCloseListener;
-    private final View rootView;
-    private final Context mContext;
     private String iconPressedColor = "#495C66";
     private String tabsColor = "#DCE1E2";
     private String backgroundColor = "#E6EBEF";
@@ -156,7 +156,7 @@ public class EmojiconsPopup extends PopupWindow implements ViewPager.OnPageChang
                 rootView.getWindowVisibleDisplayFrame(r);
 
                 int screenHeight = getUsableScreenHeight();
-                int heightDifference = rootView.getRootView().getHeight()
+                int heightDifference = screenHeight
                         - (r.bottom - r.top);
                 int resourceId = mContext.getResources()
                         .getIdentifier("status_bar_height",
@@ -333,8 +333,23 @@ public class EmojiconsPopup extends PopupWindow implements ViewPager.OnPageChang
     public void onPageScrollStateChanged(int i) {
     }
 
+    public interface OnEmojiconBackspaceClickedListener {
+        void onEmojiconBackspaceClicked(View v);
+    }
+
+    public interface OnSoftKeyboardOpenCloseListener {
+        void onKeyboardOpen(int keyBoardHeight);
+
+        void onKeyboardClose();
+    }
+
     private static class EmojisPagerAdapter extends PagerAdapter {
         private final List<EmojiconGridView> views;
+
+        EmojisPagerAdapter(List<EmojiconGridView> views) {
+            super();
+            this.views = views;
+        }
 
         EmojiconRecentsGridView getRecentFragment() {
             for (EmojiconGridView it : views) {
@@ -342,11 +357,6 @@ public class EmojiconsPopup extends PopupWindow implements ViewPager.OnPageChang
                     return (EmojiconRecentsGridView) it;
             }
             return null;
-        }
-
-        EmojisPagerAdapter(List<EmojiconGridView> views) {
-            super();
-            this.views = views;
         }
 
         @Override
@@ -386,11 +396,10 @@ public class EmojiconsPopup extends PopupWindow implements ViewPager.OnPageChang
     static class RepeatListener implements View.OnTouchListener {
 
         private final Handler handler = new Handler();
-
-        private int initialInterval;
         private final int normalInterval;
         private final OnClickListener clickListener;
-
+        private int initialInterval;
+        private View downView;
         private final Runnable handlerRunnable = new Runnable() {
             @Override
             public void run() {
@@ -402,8 +411,6 @@ public class EmojiconsPopup extends PopupWindow implements ViewPager.OnPageChang
                 clickListener.onClick(downView);
             }
         };
-
-        private View downView;
 
         /**
          * @param clickListener The OnClickListener, that will be called
@@ -434,15 +441,5 @@ public class EmojiconsPopup extends PopupWindow implements ViewPager.OnPageChang
             }
             return false;
         }
-    }
-
-    public interface OnEmojiconBackspaceClickedListener {
-        void onEmojiconBackspaceClicked(View v);
-    }
-
-    public interface OnSoftKeyboardOpenCloseListener {
-        void onKeyboardOpen(int keyBoardHeight);
-
-        void onKeyboardClose();
     }
 }
