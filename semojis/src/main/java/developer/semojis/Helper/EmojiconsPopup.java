@@ -156,7 +156,7 @@ public class EmojiconsPopup extends PopupWindow implements ViewPager.OnPageChang
                 rootView.getWindowVisibleDisplayFrame(r);
 
                 int screenHeight = getUsableScreenHeight();
-                int heightDifference = screenHeight
+                int heightDifference =rootView.getRootView().getHeight()
                         - (r.bottom - r.top);
                 int resourceId = mContext.getResources()
                         .getIdentifier("status_bar_height",
